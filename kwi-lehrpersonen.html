@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>KWI Lehrpersonen – Lernkarten</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 16px 40px;
+    user-select: none;
+  }
+
+  h1 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #a0c4ff;
+    margin-bottom: 6px;
+    text-align: center;
+  }
+
+  .subtitle {
+    font-size: 0.75rem;
+    color: #667;
+    margin-bottom: 24px;
+    text-align: center;
+  }
+
+  /* Filter */
+  .filter-bar {
+    width: 100%;
+    max-width: 420px;
+    margin-bottom: 20px;
+  }
+
+  .filter-bar input {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid #2d2d50;
+    background: #12122a;
+    color: #eee;
+    font-size: 0.9rem;
+    outline: none;
+  }
+  .filter-bar input:focus { border-color: #a0c4ff; }
+
+  .fach-select {
+    width: 100%;
+    margin-top: 8px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid #2d2d50;
+    background: #12122a;
+    color: #eee;
+    font-size: 0.9rem;
+    outline: none;
+  }
+
+  /* Progress */
+  .progress-bar-wrap {
+    width: 100%;
+    max-width: 420px;
+    background: #12122a;
+    border-radius: 20px;
+    height: 6px;
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #a0c4ff, #6ef0d0);
+    border-radius: 20px;
+    transition: width 0.3s ease;
+  }
+  .progress-label {
+    font-size: 0.72rem;
+    color: #667;
+    margin-bottom: 18px;
+    text-align: center;
+  }
+
+  /* Card */
+  .card-area {
+    width: 100%;
+    max-width: 420px;
+    perspective: 1000px;
+    cursor: pointer;
+    margin-bottom: 20px;
+  }
+
+  .card-inner {
+    position: relative;
+    width: 100%;
+    padding-bottom: 120%;
+    transform-style: preserve-3d;
+    transition: transform 0.45s cubic-bezier(.4,0,.2,1);
+    border-radius: 18px;
+  }
+
+  .card-area.flipped .card-inner {
+    transform: rotateY(180deg);
+  }
+
+  .card-face {
+    position: absolute;
+    inset: 0;
+    border-radius: 18px;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    overflow: hidden;
+  }
+
+  .card-front {
+    background: #12122a;
+    border: 1px solid #2d2d50;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .card-front img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 18px;
+    filter: brightness(0.92);
+  }
+
+  .card-front .tap-hint {
+    position: absolute;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.55);
+    color: #a0c4ff;
+    font-size: 0.7rem;
+    letter-spacing: 0.07em;
+    padding: 5px 14px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+
+  .card-back {
+    background: #0f0f22;
+    border: 1px solid #2d2d50;
+    transform: rotateY(180deg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 24px;
+    gap: 16px;
+  }
+
+  .card-back .name {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #fff;
+    text-align: center;
+    line-height: 1.3;
+  }
+
+  .card-back .fach {
+    font-size: 0.85rem;
+    color: #6ef0d0;
+    text-align: center;
+    letter-spacing: 0.04em;
+    font-weight: 500;
+  }
+
+  .placeholder-icon {
+    font-size: 5rem;
+    opacity: 0.3;
+  }
+
+  /* Buttons */
+  .nav-row {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+    max-width: 420px;
+    margin-bottom: 12px;
+  }
+
+  .nav-btn {
+    flex: 1;
+    padding: 13px;
+    border-radius: 10px;
+    border: none;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+    letter-spacing: 0.02em;
+  }
+  .nav-btn:active { transform: scale(0.97); }
+  .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .btn-prev { background: #1e1e40; color: #a0c4ff; }
+  .btn-next { background: #a0c4ff; color: #0d0d1f; }
+
+  .shuffle-btn {
+    width: 100%;
+    max-width: 420px;
+    padding: 11px;
+    border-radius: 10px;
+    border: 1px solid #2d2d50;
+    background: transparent;
+    color: #667;
+    font-size: 0.8rem;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    transition: color 0.15s, border-color 0.15s;
+    margin-bottom: 6px;
+  }
+  .shuffle-btn:hover { color: #a0c4ff; border-color: #a0c4ff; }
+
+  .count-label {
+    font-size: 0.78rem;
+    color: #445;
+    text-align: center;
+    margin-top: 4px;
+  }
+
+  .no-results {
+    color: #445;
+    font-size: 0.9rem;
+    text-align: center;
+    margin-top: 40px;
+  }
+</style>
+</head>
+<body>
+
+<h1>KWI Lehrpersonen</h1>
+<p class="subtitle">Tippe auf die Karte zum Umdrehen</p>
+
+<div class="filter-bar">
+  <input type="text" id="searchInput" placeholder="Name suchen…" oninput="applyFilters()">
+  <select class="fach-select" id="fachSelect" onchange="applyFilters()">
+    <option value="">Alle Fächer</option>
+  </select>
+</div>
+
+<div class="progress-bar-wrap">
+  <div class="progress-bar-fill" id="progressFill" style="width:0%"></div>
+</div>
+<div class="progress-label" id="progressLabel">Karte 0 von 0</div>
+
+<div class="card-area" id="cardArea" onclick="flipCard()">
+  <div class="card-inner" id="cardInner">
+    <div class="card-face card-front" id="cardFront">
+      <span class="tap-hint">Tippen zum Anschauen</span>
+    </div>
+    <div class="card-face card-back" id="cardBack"></div>
+  </div>
+</div>
+
+<div class="nav-row">
+  <button class="nav-btn btn-prev" id="prevBtn" onclick="navigate(-1)">← Zurück</button>
+  <button class="nav-btn btn-next" id="nextBtn" onclick="navigate(1)">Weiter →</button>
+</div>
+
+<button class="shuffle-btn" onclick="shuffle()">🔀 Mischen</button>
+<div class="count-label" id="countLabel"></div>
+
+<div class="no-results" id="noResults" style="display:none">Keine Lehrpersonen gefunden.</div>
+
+<script>
+const RAW = [
+  {name:"Aellig, Annette", fach:"Deutsch", img:"p4006993.jpg"},
+  {name:"Affentranger, Hella", fach:"Bildnerisches Gestalten", img:"p4022079.jpg"},
+  {name:"Allenspach, Urs", fach:"Mathematik", img:"p4022166.jpg"},
+  {name:"Balla, Judith", fach:"Bildnerisches Gestalten", img:"p4024671.jpg"},
+  {name:"Bamert Thöny, Katrin", fach:"Harfe", img:"p4006943.jpg"},
+  {name:"Barzaghi, Silvia", fach:"Italienisch", img:"p4022697.jpg"},
+  {name:"Basler, Kathrin", fach:"Technik & Design", img:"p4009731.jpg"},
+  {name:"Beer, Pascal", fach:"Geografie, Wirtschaft und Recht", img:"p4005712.jpg"},
+  {name:"Beilstein, Nadine", fach:"Sport", img:"p4020305.jpg"},
+  {name:"Berger, Jan", fach:"Mathematik", img:"p4025385.jpg"},
+  {name:"Berisha, Luan", fach:"Deutsch", img:"p4024652.jpg"},
+  {name:"Bernasconi, Marino", fach:"Klavier", img:"p4086.jpg"},
+  {name:"Bernold, Jamie", fach:"Technik & Design", img:"p4024601.jpg"},
+  {name:"Berweger, Benjamin", fach:"Sologesang", img:"p4022691.jpg"},
+  {name:"Beynon, Ruben", fach:"Physik", img:"p4022799.jpg"},
+  {name:"Binswanger, Romy", fach:"Geschichte", img:"p4021516.jpg"},
+  {name:"Bischoff, Marc", fach:"Technik & Design", img:"p4023743.jpg"},
+  {name:"Blumer, Fridolin", fach:"Kontrabass", img:"p4024544.jpg"},
+  {name:"Bond, Tim", fach:"Klavier", img:"p4023659.jpg"},
+  {name:"Bories, Anne-Sophie", fach:"Französisch", img:"p4024607.jpg"},
+  {name:"Borner, Michel", fach:"Deutsch, Philosophie", img:"p4021599.jpg"},
+  {name:"Bossard, Yves", fach:"Sport", img:"p4019820.jpg"},
+  {name:"Bourquin, Michel", fach:"Deutsch", img:"p172599.jpg"},
+  {name:"Brändli, Sandro", fach:"Deutsch", img:"p4022093.jpg"},
+  {name:"Brockhaus-Soldenhoff, Nicole", fach:"Wirtschaft und Recht", img:"p4021570.jpg"},
+  {name:"Brodbeck, Jana", fach:"Englisch, Immersion", img:"p130537.jpg"},
+  {name:"Bucher, Manuel", fach:"Deutsch", img:"p4023624.jpg"},
+  {name:"Buri, Simon", fach:"Bildnerisches Gestalten", img:"p4022078.jpg"},
+  {name:"Burri, Olivier", fach:"Textverarbeitung", img:"p4014809.jpg"},
+  {name:"Camenisch, Matthias", fach:"Klavier", img:"p4018735.jpg"},
+  {name:"Campana, Luana", fach:"Chemie", img:"p4022748.jpg"},
+  {name:"Caspar, Angelika", fach:"Violine", img:"p4020925.jpg"},
+  {name:"Castilla, Isora", fach:"Klavier", img:"p4017776.jpg"},
+  {name:"Cevik, Murat", fach:"Querflöte", img:"p4011474.jpg"},
+  {name:"Christen, Carmen", fach:"Informatik, Mathematik", img:"p4021482.jpg"},
+  {name:"Cloutier, Geneviève", fach:"Französisch", img:"p4021597.jpg"},
+  {name:"Colombo, Lucia", fach:"Mathematik", img:"p4024618.jpg"},
+  {name:"Colqui Ritter, Silvia", fach:"Spanisch", img:"p4014954.jpg"},
+  {name:"Comiotto, Johannes", fach:"Französisch, Latein", img:"p4002895.jpg"},
+  {name:"Crivelli, Mira", fach:"Englisch", img:"p4007037.jpg"},
+  {name:"Däster-Fricker, Christina", fach:"Sologesang", img:"p4007002.jpg"},
+  {name:"De Luca, Ylenia", fach:"Deutsch, Italienisch", img:"p4020971.jpg"},
+  {name:"Donzé, Alessandra", fach:"Informatik", img:"p4021598.jpg"},
+  {name:"Eberhard-Hindges, Nicole", fach:"Biologie", img:null},
+  {name:"Eger, Marc", fach:"Biologie", img:"p4012338.jpg"},
+  {name:"Egger, Lila", fach:"Bildnerisches Gestalten, Technik & Design", img:null},
+  {name:"Egli, Daniel", fach:"Chemie", img:"p4007964.jpg"},
+  {name:"Egli, Monika", fach:"Englisch, Geschichte, Immersion", img:"p136210.jpg"},
+  {name:"Emery, Mark", fach:"Englisch, Immersion", img:"p4009672.jpg"},
+  {name:"Eugster, Corina", fach:"Deutsch", img:"p4013144.jpg"},
+  {name:"Evren, Davud", fach:"Informatik", img:"p4022789.jpg"},
+  {name:"Falcón García, Noelia", fach:"Französisch", img:"p4023671.jpg"},
+  {name:"Ferdinand, Rachid", fach:"Französisch", img:"p4023692.jpg"},
+  {name:"Fischer, Eliane", fach:"Chemie, Immersion", img:"p4017796.jpg"},
+  {name:"Frei, Philipp", fach:"Bildnerisches Gestalten", img:"p4002897.jpg"},
+  {name:"Frey, Joachim", fach:"Gitarre", img:"p4025409.jpg"},
+  {name:"Frey, Jonas", fach:"Bildnerisches Gestalten", img:"p4019769.jpg"},
+  {name:"Frey-Martins, Elisabeth", fach:"Französisch", img:"p4007008.jpg"},
+  {name:"Freyvogel, Corina", fach:"Gitarre", img:"p122408.jpg"},
+  {name:"Fuchs, Luca", fach:"Geografie", img:"p4023653.jpg"},
+  {name:"Gada, Andreas", fach:"Klavier", img:"p99350.jpg"},
+  {name:"Gadient, Nadja", fach:"Pädagogik, Psychologie", img:"p4022831.jpg"},
+  {name:"Galiffa, Matteo", fach:"Italienisch", img:"p4019850.jpg"},
+  {name:"Ganz, Pascal", fach:"Gitarre", img:"p4025410.jpg"},
+  {name:"Gareiss, Valéry", fach:"Immersion, Mathematik", img:"p4005419.jpg"},
+  {name:"Geisser, Heinz", fach:"Gitarre", img:"p17246.jpg"},
+  {name:"Gerber, Bernhard", fach:"Geografie", img:"p4021596.jpg"},
+  {name:"Gienal, Magnus", fach:"Mathematik, Physik", img:"p4020408.jpg"},
+  {name:"Gil, Alexander", fach:"Gitarre", img:"p4024638.jpg"},
+  {name:"Gloor, Jonas", fach:"Englisch", img:"p4023591.jpg"},
+  {name:"Goldberg, Tabea", fach:"Sport", img:"p4021600.jpg"},
+  {name:"Gollner, Andrea", fach:"Deutsch", img:"p4022682.jpg"},
+  {name:"González, Juan", fach:"Spanisch", img:"p4023685.jpg"},
+  {name:"Goslicka, Xenia", fach:"Deutsch", img:"p4019768.jpg"},
+  {name:"Graf, Eva Martina", fach:"Biologie", img:null},
+  {name:"Greter, Nadja", fach:"Biologie", img:"p4024491.jpg"},
+  {name:"Gretsch, Camilla", fach:"Informatik", img:"p4022749.jpg"},
+  {name:"Gross, Tobias", fach:"Sport", img:"p4012372.jpg"},
+  {name:"Grossi, Fabio", fach:"Technik & Design", img:"p4017770.jpg"},
+  {name:"Grüebler, Etienne", fach:"Geografie", img:"p4020343.jpg"},
+  {name:"Gubser, Nicole", fach:"Mathematik", img:"p4013240.jpg"},
+  {name:"Günthart, Romy", fach:"Deutsch", img:"p4020962.jpg"},
+  {name:"Gürke, Erica", fach:"Englisch", img:null},
+  {name:"Gyr, Ramineh", fach:"Immersion, Mathematik", img:null},
+  {name:"Haufler, Boris", fach:"Französisch, Italienisch", img:"p4003767.jpg"},
+  {name:"Hauser, Moritz", fach:"Biologie", img:"p4016823.jpg"},
+  {name:"Hefti, Martin A.", fach:"Biologie, Immersion", img:"p4005370.jpg"},
+  {name:"Hegnauer, Elijah", fach:"Englisch", img:"p4024519.jpg"},
+  {name:"Heiner, Stephan", fach:"Mathematik", img:"p4013294.jpg"},
+  {name:"Hermann Huber, Maja", fach:"Sologesang", img:"p4007966.jpg"},
+  {name:"Hermann, Daniel", fach:"Geografie", img:"p4022075.jpg"},
+  {name:"Hilger, Evelyne", fach:"Französisch", img:"p4019852.jpg"},
+  {name:"Hillebrand, Philipp", fach:"Saxophon", img:"p4016858.jpg"},
+  {name:"Hoffmann, Jael", fach:"Biologie", img:"p4019774.jpg"},
+  {name:"Holzer, Martin", fach:"Mathematik", img:"p4019767.jpg"},
+  {name:"Hug, Dominik", fach:"Deutsch", img:"p4013276.jpg"},
+  {name:"Hürlimann, Anna", fach:"Musik", img:"p4016769.jpg"},
+  {name:"Ionov, Alexander", fach:"Russisch", img:"p4011524.jpg"},
+  {name:"Jablonkay Aegerter, Anna", fach:"Geografie", img:"p4018767.jpg"},
+  {name:"Jacober, Bernadette", fach:"RKE", img:"p4024592.jpg"},
+  {name:"Jäger, Marcel", fach:"Englisch, Geschichte, Immersion", img:"p4007071.jpg"},
+  {name:"Kaiser, Fabian", fach:"Geografie", img:"p4023616.jpg"},
+  {name:"Kanagalingam, Thamayanth", fach:"Physik", img:"p4024528.jpg"},
+  {name:"Karch, Céline", fach:"Gitarre", img:"p4024639.jpg"},
+  {name:"Kasper, Flavia", fach:"Französisch", img:"p4022747.jpg"},
+  {name:"Kern Waldhoff, Mirjam", fach:"Bildnerisches Gestalten", img:"p129426.jpg"},
+  {name:"Keusch, Nadja", fach:"Sport", img:"p4013226.jpg"},
+  {name:"Klaus, Seraina", fach:"Geografie", img:"p4020324.jpg"},
+  {name:"Kleimann, Meret", fach:"Sport", img:"p4017764.jpg"},
+  {name:"Krüttli, Urs", fach:"Geografie, Sport, Textverarbeitung", img:null},
+  {name:"Kümin, Andrin", fach:"Englisch", img:"p4024593.jpg"},
+  {name:"Küng, Peter", fach:"Deutsch, Geschichte", img:"p4005383.jpg"},
+  {name:"Kürsteiner, Yannick", fach:"Chemie", img:"p4022726.jpg"},
+  {name:"Kym, Dominik", fach:"Musik", img:"p4024597.jpg"},
+  {name:"Labusch Bangerter, Annette", fach:"Sologesang", img:"p4007965.jpg"},
+  {name:"Langenbach, Annika", fach:"Sologesang", img:"p4025406.jpg"},
+  {name:"Liechti, Vera", fach:"Französisch", img:"p4020989.jpg"},
+  {name:"Lienhart Reichenbach, Emanuela", fach:"Bildnerisches Gestalten", img:"p129425.jpg"},
+  {name:"Linder, Christoph", fach:"–", img:"p4014117.jpg"},
+  {name:"López del Pozo, Irene", fach:"Horn", img:"p4022688.jpg"},
+  {name:"Lunardi, Gianna", fach:"Sologesang", img:"p4014955.jpg"},
+  {name:"Man, Stefan", fach:"Klavier", img:"p4025411.jpg"},
+  {name:"Mantel, Lukas", fach:"Schlagzeug", img:"p4024559.jpg"},
+  {name:"Marti, Andreas", fach:"Technik & Design", img:"p172602.jpg"},
+  {name:"Masone Arcaro, Marusca", fach:"Französisch", img:"p4023612.jpg"},
+  {name:"Mätzener, Liliane", fach:"Mathematik", img:"p82806.jpg"},
+  {name:"Matzinger, Matthias", fach:"Deutsch", img:"p4015861.jpg"},
+  {name:"Meier IU, Martin", fach:"Chor, Musik, Trompete", img:"p4014962.jpg"},
+  {name:"Meier, Martin", fach:"Chor, Musik, Trompete", img:"p4011460.jpg"},
+  {name:"Melly, Timothée", fach:"Französisch", img:"p4021485.jpg"},
+  {name:"Mestrinel, Philipp", fach:"Orgel", img:"p4024545.jpg"},
+  {name:"Morra, Giulia", fach:"Deutsch", img:"p4022808.jpg"},
+  {name:"Müllenbach, Moritz", fach:"Cello", img:"p4013225.jpg"},
+  {name:"Müller, Andrea", fach:"Geografie", img:"p4025392.jpg"},
+  {name:"Müller, Cinja", fach:"Physik", img:"p4022062.jpg"},
+  {name:"Müller, Sandra", fach:"Englisch", img:"p4022841.jpg"},
+  {name:"Nay, Wanda", fach:"Bildnerisches Gestalten", img:"p4024599.jpg"},
+  {name:"Nideröst, Oliver", fach:"Sport", img:"p4024667.jpg"},
+  {name:"Nussbaumer, Souria", fach:"Geografie", img:"p179669.jpg"},
+  {name:"Pagani, Fabian", fach:"Mathematik", img:"p4022685.jpg"},
+  {name:"Pedrazzi Amann, Graziella", fach:"Chemie", img:"p4004590.jpg"},
+  {name:"Pfändler, Silvan", fach:"Biologie", img:"p4019823.jpg"},
+  {name:"Pfeifer, Luise", fach:"Englisch", img:"p4019847.jpg"},
+  {name:"Phillips, Wanda", fach:"Englisch", img:"p4008888.jpg"},
+  {name:"Pizzolato, Anina", fach:"Bildnerisches Gestalten", img:"p4025386.jpg"},
+  {name:"Portmann Deplazes, Corina", fach:"Gitarre", img:null},
+  {name:"Primo, Amedeo", fach:"Mathematik, Physik", img:"p4020972.jpg"},
+  {name:"Prusák, Mariana", fach:"Deutsch", img:"p4025408.jpg"},
+  {name:"Pulfer, Manuel", fach:"Informatik", img:"p4024603.jpg"},
+  {name:"Raemy, Brandon", fach:"Geografie", img:"p4023666.jpg"},
+  {name:"Raemy, Fabienne", fach:"Englisch, Französisch", img:"p4016768.jpg"},
+  {name:"Rakow, Bettina", fach:"Sport", img:null},
+  {name:"Regli, Pia", fach:"Französisch", img:"p4023655.jpg"},
+  {name:"Reichle, Florian", fach:"Schlagzeug", img:"p4020909.jpg"},
+  {name:"Reinhard, Philipp", fach:"Mathematik", img:"p4021484.jpg"},
+  {name:"Reiser, Fabienne", fach:"Geografie", img:"p4018753.jpg"},
+  {name:"Ritscher-Pauletti, Maria", fach:"Französisch", img:"p4008857.jpg"},
+  {name:"Ritter, Yvonne", fach:"–", img:"p4025412.jpg"},
+  {name:"Riva, Paolo", fach:"Bildnerisches Gestalten", img:"p4019772.jpg"},
+  {name:"Rizzi, Aurelio", fach:"Geschichte, Latein", img:null},
+  {name:"Robbiani, Elena", fach:"Italienisch", img:"p4021601.jpg"},
+  {name:"Rochman, Jing", fach:"Französisch", img:"p4023611.jpg"},
+  {name:"Roth, Michael", fach:"Englisch, Immersion, Philosophie", img:"p116654.jpg"},
+  {name:"Rüegg, Marlies", fach:"Bildnerisches Gestalten", img:"p4019807.jpg"},
+  {name:"Rüegg, Patrick", fach:"RKE", img:"p4022687.jpg"},
+  {name:"Rüegger, Thomas", fach:"Englisch, Geschichte, Immersion", img:"p4003776.jpg"},
+  {name:"Ruiz, Eduardo", fach:"Musik", img:"p4021518.jpg"},
+  {name:"Ruoss, Karin", fach:"Geschichte", img:"p4008800.jpg"},
+  {name:"Rusch, Beeke", fach:"Mathematik", img:"p4022802.jpg"},
+  {name:"Rutishauser, Mattia", fach:"Immersion, Mathematik", img:"p4002899.jpg"},
+  {name:"Rütti-Schütt, Silja-Maaria", fach:"Blockflöte", img:"p4019795.jpg"},
+  {name:"Sager, Lisa", fach:"Musik", img:"p4023592.jpg"},
+  {name:"Schaffner, Philip", fach:"Informatik", img:"p4022751.jpg"},
+  {name:"Schenker, Kathrin", fach:"Klavier", img:"p168239.jpg"},
+  {name:"Schiwow, Julia", fach:"Sologesang", img:"p4024546.jpg"},
+  {name:"Schmid, Karin", fach:"Französisch", img:"p4020910.jpg"},
+  {name:"Schmid, Muriel", fach:"Sport", img:"p4022165.jpg"},
+  {name:"Schneider, Valentin", fach:"Deutsch", img:"p4024637.jpg"},
+  {name:"Schönbächler, Miriam", fach:"Sport", img:"p4023711.jpg"},
+  {name:"Schuler IU, Thomas", fach:"Chor, Musik", img:"p4016758.jpg"},
+  {name:"Schuler, Thomas", fach:"Chor, Musik", img:"p4018774.jpg"},
+  {name:"Schürmann, Maya", fach:"Biologie", img:"p4007266.jpg"},
+  {name:"Schweighoffer, Martin", fach:"Mathematik, Physik", img:"p4025387.jpg"},
+  {name:"Senn, Priska", fach:"Bildnerisches Gestalten", img:null},
+  {name:"Serban, Cleonela", fach:"Informatik", img:"p4025391.jpg"},
+  {name:"Seyfried, Ulrich", fach:"Griechisch, Latein", img:"p4007000.jpg"},
+  {name:"Simonyan Ekchian, Lilit", fach:"Französisch", img:null},
+  {name:"Spengler, Patrick", fach:"Informatik, Mathematik, Physik", img:"p4013287.jpg"},
+  {name:"Spinner, Simon", fach:"Deutsch", img:"p4013145.jpg"},
+  {name:"Stähli, Philipp", fach:"Deutsch", img:"p4020304.jpg"},
+  {name:"Steinemann, Olivia", fach:"Latein", img:"p4014944.jpg"},
+  {name:"Steiner, David", fach:"Mathematik", img:"p4016859.jpg"},
+  {name:"Steinfeld, Joseph", fach:"Geschichte", img:"p4006168.jpg"},
+  {name:"Stettler, Regula", fach:"Bildnerisches Gestalten", img:"p4005373.jpg"},
+  {name:"Straumann, Anna-Katharina", fach:"Englisch", img:"p4020967.jpg"},
+  {name:"Streiff Corti, David", fach:"Geschichte", img:"p4023590.jpg"},
+  {name:"Strübi, Alexander", fach:"Sport", img:"p4007853.jpg"},
+  {name:"Stuber, Tobias", fach:"Sologesang", img:"p4025413.jpg"},
+  {name:"Studer, Philipp", fach:"Bildnerisches Gestalten", img:"p4020338.jpg"},
+  {name:"Suter, Roy", fach:"Geschichte, Immersion", img:"p4016740.jpg"},
+  {name:"Thalmann, Guyslaine", fach:"Biologie", img:"p4015831.jpg"},
+  {name:"Tillmann, Barbara", fach:"Oboe", img:"p4016797.jpg"},
+  {name:"Tinner, Fabian", fach:"Mathematik, Musik", img:"p4018731.jpg"},
+  {name:"Torp, Frieder", fach:"Musik", img:"p4020337.jpg"},
+  {name:"Torriani, Fabio", fach:"Mathematik, Physik", img:"p4008909.jpg"},
+  {name:"Troxler, Larissa", fach:"Bildnerisches Gestalten", img:"p4020988.jpg"},
+  {name:"Umani, Claudia", fach:"Mathematik", img:"p4023593.jpg"},
+  {name:"Unternährer, Bojan", fach:"Wirtschaft und Recht", img:"p4012394.jpg"},
+  {name:"van Bedaf, Christine", fach:"Englisch", img:"p4023647.jpg"},
+  {name:"Varela, Ivana", fach:"Französisch", img:"p4016786.jpg"},
+  {name:"Vatan Okyay, Nagihan", fach:"Bildnerisches Gestalten", img:"p4022111.jpg"},
+  {name:"Vesel, Daniel", fach:"Posaune", img:"p4019781.jpg"},
+  {name:"Vogel, Anja", fach:"Deutsch", img:"p4024650.jpg"},
+  {name:"Vulovic, Goran", fach:"Deutsch, Geschichte", img:"p4015816.jpg"},
+  {name:"Wäger, Roland", fach:"Schlagzeug", img:"p4022690.jpg"},
+  {name:"Wandeler, Valentin", fach:"Klarinette", img:"p4022081.jpg"},
+  {name:"Weber, Thomas", fach:"Akkordeon", img:"p4013231.jpg"},
+  {name:"Weder, Lea", fach:"Musik", img:"p4022854.jpg"},
+  {name:"Wenger, Maya", fach:"Orchester, Violine", img:"p93660.jpg"},
+  {name:"Widén, Paul-Johan", fach:"Wirtschaft und Recht", img:"p4025050.jpg"},
+  {name:"Widmer, Sophia", fach:"Geografie", img:"p4024596.jpg"},
+  {name:"Wild, Christian", fach:"Klavier", img:"p4024610.jpg"},
+  {name:"Wildberger, Martina", fach:"Bildnerisches Gestalten", img:"p4024561.jpg"},
+  {name:"Willi, Matteo", fach:"Mathematik", img:"p4014106.jpg"},
+  {name:"Willibald, Jana", fach:"Sport", img:null},
+  {name:"Wirth, Roland", fach:"Wirtschaft und Recht", img:"p4024605.jpg"},
+  {name:"Wirthlin, Eva", fach:"Sport", img:"p4007925.jpg"},
+  {name:"Zachmann, Nico", fach:"Philosophie", img:"p4024509.jpg"},
+  {name:"Zahnd, Nicole", fach:"Pädagogik, Psychologie", img:"p4022830.jpg"},
+  {name:"Zappella, Livia", fach:"Geschichte", img:"p4023617.jpg"},
+  {name:"Ziegler, Stefanie", fach:"Deutsch", img:"p4009761.jpg"},
+];
+
+const BASE = "https://www.kwi.ch/uploads/tx_tamrest/";
+
+// Build Fach options
+const allFaecher = new Set();
+RAW.forEach(p => p.fach.split(', ').forEach(f => allFaecher.add(f.trim())));
+const fachSelect = document.getElementById('fachSelect');
+[...allFaecher].sort().forEach(f => {
+  const o = document.createElement('option');
+  o.value = f; o.textContent = f;
+  fachSelect.appendChild(o);
+});
+
+let deck = [...RAW];
+let filtered = [...deck];
+let idx = 0;
+let flipped = false;
+
+function applyFilters() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const fach = document.getElementById('fachSelect').value;
+  filtered = deck.filter(p => {
+    const matchName = p.name.toLowerCase().includes(q);
+    const matchFach = !fach || p.fach.includes(fach);
+    return matchName && matchFach;
+  });
+  idx = 0;
+  render();
+}
+
+function render() {
+  const noResults = document.getElementById('noResults');
+  const cardArea = document.getElementById('cardArea');
+  if (filtered.length === 0) {
+    noResults.style.display = 'block';
+    cardArea.style.display = 'none';
+    document.getElementById('progressLabel').textContent = 'Keine Ergebnisse';
+    document.getElementById('progressFill').style.width = '0%';
+    document.getElementById('countLabel').textContent = '';
+    return;
+  }
+  noResults.style.display = 'none';
+  cardArea.style.display = 'block';
+
+  const p = filtered[idx];
+  const front = document.getElementById('cardFront');
+  const back = document.getElementById('cardBack');
+
+  // Reset flip
+  flipped = false;
+  cardArea.classList.remove('flipped');
+
+  // Front: photo
+  if (p.img) {
+    front.innerHTML = `<img src="${BASE}${p.img}" alt="${p.name}" onerror="this.parentElement.innerHTML='<span class=\\'placeholder-icon\\'>👤</span><span class=\\'tap-hint\\'>Tippen zum Anschauen</span>'">
+    <span class="tap-hint">Tippen zum Anschauen</span>`;
+  } else {
+    front.innerHTML = `<span class="placeholder-icon">👤</span><span class="tap-hint">Tippen zum Anschauen</span>`;
+  }
+
+  // Back: name + fach
+  back.innerHTML = `<div class="name">${p.name}</div><div class="fach">${p.fach}</div>`;
+
+  // Progress
+  const pct = filtered.length > 1 ? (idx / (filtered.length - 1)) * 100 : 100;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = `Karte ${idx + 1} von ${filtered.length}`;
+  document.getElementById('countLabel').textContent = `${filtered.length} Lehrperson${filtered.length !== 1 ? 'en' : ''} gefiltert`;
+
+  document.getElementById('prevBtn').disabled = idx === 0;
+  document.getElementById('nextBtn').disabled = idx === filtered.length - 1;
+}
+
+function flipCard() {
+  flipped = !flipped;
+  document.getElementById('cardArea').classList.toggle('flipped', flipped);
+}
+
+function navigate(dir) {
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= filtered.length) return;
+  idx = newIdx;
+  render();
+}
+
+function shuffle() {
+  // Fisher-Yates
+  for (let i = filtered.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [filtered[i], filtered[j]] = [filtered[j], filtered[i]];
+  }
+  idx = 0;
+  render();
+}
+
+// Keyboard support
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight') navigate(1);
+  else if (e.key === 'ArrowLeft') navigate(-1);
+  else if (e.key === ' ') { e.preventDefault(); flipCard(); }
+});
+
+// Touch swipe
+let touchStartX = 0;
+document.getElementById('cardArea').addEventListener('touchstart', e => {
+  touchStartX = e.touches[0].clientX;
+}, {passive:true});
+document.getElementById('cardArea').addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  if (Math.abs(dx) > 50) navigate(dx < 0 ? 1 : -1);
+  else flipCard();
+}, {passive:true});
+
+render();
+</script>
+</body>
+</html>
